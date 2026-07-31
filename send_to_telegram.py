@@ -99,8 +99,7 @@ def main():
         print("HATA: TELEGRAM_BOT_TOKEN veya TELEGRAM_CHAT_ID .env dosyasinda bulunamadi.")
         sys.exit(1)
 
-    header = f"AKN Trades — #{row['id']} ({args.slot or 'plansiz'})\n\nAsagidaki metni kopyalayip X'e yapistir:\n\n"
-    full_message = header + text
+    full_message = text
 
     try:
         send_telegram_message(token, chat_id, full_message)
