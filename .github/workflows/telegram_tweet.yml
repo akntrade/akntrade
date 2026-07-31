@@ -1,1 +1,56 @@
-.github_workflows_telegram_tweet.yml
+name: AKN Trades - Telegram Tweet Bildirimi
+
+# Saatler UTC'dir. Turkiye (TRT) UTC+3 ve yaz saati uygulamasi olmadigi
+# icin sabit: 10:00 TRT = 07:00 UTC, 15:00 TRT = 12:00 UTC, 19:30 TRT = 16:30 UTC.
+on:
+  schedule:
+    - cron: '0 7 * * *'    # 10:00 TRT - sabah
+    - cron: '0 12 * * *'   # 15:00 TRT - ogleden sonra
+    - cron: '30 16 * * *'  # 19:30 TRT - aksam
+  workflow_dispatch: {}     # istersen GitHub arayuzunden manuel de calistirabilirsin
+
+jobs:
+  send-tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repoyu indir
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bagimliliklari kur
+        run: pip install -r requirements_telegram.txt
+
+      - name: Slot adini belirle (UTC saatine gore)
+        id: slot
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" = "07" ]; then echo "slot=sabah" >> "$GITHUB_OUTPUT"
+          elif [ "$HOUR" = "12" ]; then echo "slot=ogleden_sonra" >> "$GITHUB_OUTPUT"
+          else echo "slot=aksam" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Tweeti Telegram'a gonder
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python3 -c "
+          import os
+          with open('.env', 'w') as f:
+              f.write(f\"TELEGRAM_BOT_TOKEN={os.environ['TELEGRAM_BOT_TOKEN']}\n\")
+              f.write(f\"TELEGRAM_CHAT_ID={os.environ['TELEGRAM_CHAT_ID']}\n\")
+          "
+          python3 send_to_telegram.py --slot ${{ steps.slot.outputs.slot }}
+
+      - name: Guncellenen tweets.csv'yi repoya geri yaz
+        run: |
+          rm -f .env
+          git config user.name "akn-trades-bot"
+          git config user.email "akn-trades-bot@users.noreply.github.com"
+          git add tweets.csv send_log.txt || true
+          git diff --quiet --cached || git commit -m "tweet durumu guncellendi: ${{ steps.slot.outputs.slot }}"
+          git push
