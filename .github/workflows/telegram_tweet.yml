@@ -54,3 +54,5 @@ jobs:
           git add tweets.csv send_log.txt || true
           git diff --quiet --cached || git commit -m "tweet durumu guncellendi: ${{ steps.slot.outputs.slot }}"
           git push
+
+# tetikleyici testi
