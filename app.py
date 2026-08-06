@@ -25,6 +25,9 @@ import config
 import notifier
 import scanner
 import state
+import safe_runtime_patch
+
+safe_runtime_patch.apply()
 
 log = logging.getLogger("app")
 
